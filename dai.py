@@ -7,7 +7,7 @@ import re
 import signal
 import sys
 import time
-import ida
+import sabridge
 
 from threading import Thread
 
@@ -20,6 +20,7 @@ _interval = {}
 
 
 def push_data(df_name):
+
     if not _devices[df_name].push_data:
         return
     while _flags[df_name]:
@@ -67,10 +68,6 @@ def main(app):
     host = app.__dict__.get('host')
     if host is None:
         raise RegistrationError('host not given.')
-
-    port = app.__dict__.get('port')
-    if port is None:
-        port = 9992
 
     from uuid import UUID
     device_addr = app.__dict__.get('device_addr')
@@ -141,7 +138,7 @@ def main(app):
     
 
     context = register(
-        'http://{}:{}'.format(host, port),
+        host,
         on_signal=on_signal,
         on_data=on_data,
         accept_protos=['mqtt'],
@@ -157,17 +154,16 @@ def main(app):
 
     atexit.register(deregister)
         
-    ida.Bridge2Arduino()
+    sabridge.Bridge2Arduino()
         
     #signal.pause()
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
-        ida_filename = 'ida'
+        sabridge_filename = 'sabridge'
     elif len(sys.argv) == 2:
-        ida_filename = sys.argv[1]
-    app = importlib.import_module(ida_filename)
-
+        sabridge_filename = sys.argv[1]
+    app = importlib.import_module(sabridge_filename)
     main(app)
     
     

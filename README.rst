@@ -1,6 +1,8 @@
 ArduinoYun DA for IoTtalk v2
 ============================
-For iottalk v2 client, you have to install paho. Remember to install version [1.4.0](https://pypi.org/project/paho-mqtt/1.4.0/).
+For iottalk v2 client, you have to install ``paho-mqtt``. Remember to install version 1.4.0: https://pypi.org/project/paho-mqtt/1.4.0/.
+
+.. code-block:: 
 
     wget https://files.pythonhosted.org/packages/25/63/db25e62979c2a716a74950c9ed658dce431b5cb01fde29eb6cba9489a904/paho-mqtt-1.4.0.tar.gz
     

@@ -1,29 +1,28 @@
-
-
-ServerIP = 'IoTtalk Ver. 2 Server IP'
-device_model ='MCU_board'
+api_url = 'IoTtalk Ver. 2 Server IP'
+device_model = 'MCU_board'
 device_name = None
+# device_addr = 'your device addr'
 username = None
-Comm_interval = 0.5  # unit:second
+push_interval = 0.5  # global interval
 
-def odf():  # int only
+def odf():
     return [
-	('D2', 0, 'D2'),
-	('D3', 0, 'D3'),
-	('D4', 0, 'D4'),
-	('D5~PWM', 0, 'D5~PWM'),
-	('D6~PWM', 0, 'D6~PWM'),
-        ('D7', 0, 'D7'),
-        ('D8', 0, 'D8'),
-        ('D9~PWM', 0, 'D9~PWM'),
+        ('D2-O', ('int', )),
+        ('D3-O', ('int', )),
+        ('D4-O', ('int', )),
+        ('D5Pwm-O', ('int', )),
+        ('D6Pwm-O', ('int', )),
+        ('D7-O', ('int', )),
+        ('D8-O', ('int', )),
+        ('D9Pwm-O', ('int', )),
     ]
 
 def idf():
     return [
-       ('A0', int),
-       ('A1', int),
-       ('A2', int),
-       ('A3', int),
-       ('A4', int),
-       ('A5', int),
+        ('A0-I', ('int', )),
+        ('A1-I', ('int', )),
+        ('A2-I', ('int', )),
+        ('A3-I', ('int', )),
+        ('A4-I', ('int', )),
+        ('A5-I', ('int', )),
     ]

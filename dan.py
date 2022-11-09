@@ -318,23 +318,23 @@ class Client(object):
         if profile:
             body['profile'] = profile
 
-        try:
-            response = requests.put(
+        print(self.context.url)
+        response = requests.put(
                 '{}/{}'.format(self.context.url, self.context.app_id),
                 headers={
                     'Content-Type': 'application/json',
                 },
-                data=json.dumps(body)
+                data=json.dumps(body),  verify=False
             )
 
-            if response.status_code != 200:
+        if response.status_code != 200:
                 raise RegistrationError(response.json()['reason'])
-            else:
+        else:
                 print('device id   = ', response.json()['id'])
                 print('device name = ', response.json()['name'])                
 
-        except requests.exceptions.ConnectionError:
-            raise RegistrationError('ConnectionError')
+        #except requests.exceptions.ConnectionError:
+        #    raise RegistrationError('ConnectionError')
 
         metadata = response.json()
         self.context.mqtt_host = metadata['url']['host']

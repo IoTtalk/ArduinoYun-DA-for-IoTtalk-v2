@@ -2,6 +2,7 @@ from functools import partial
 from uuid import getnode
 import time, sys, os, Queue
 from dan import NoData
+import struct
 import custom
 
 sys.path.insert(0, '/usr/lib/python2.7/bridge/')
@@ -11,36 +12,36 @@ idfInfo = custom.idf()
 odfInfo = custom.odf()
 ODFcache = {}
 IDFcache = {}
+
 IDFsignal = {}
 odf2Bridge = {}
+
 incomming = {}
 for f_name in [t[0] for t in odfInfo]:
     incomming[f_name] = 0
 timestamp = time.time()
 
+odfMap = {
+    odf[0]: odf[1]
+    for odf in odfInfo
+}
 
 os.system(r'echo "none" > /sys/class/leds/ds:green:usb/trigger')
 os.system(r'echo "none" > /sys/class/leds/ds:green:wlan/trigger')
 
 
 class app(dict):
-    global ODFcache, IDFcache, odf2Bridge
+    global ODFcache, IDFcache, odf2Bridge, odfMap
 
-    host = custom.ServerIP
+    host = custom.api_url
     device_name = custom.device_name
     device_model = custom.device_model
-    device_addr = "{:012X}".format(getnode())
+    device_addr = custom.device_addr
     username = custom.username   # optional
-    push_interval = custom.Comm_interval  # global interval
+    push_interval = custom.push_interval  # global interval
 
     idf_list = [t[0] for t in idfInfo]
-    odf_list = []
-    for t in odfInfo:
-        if t[0] not in odf_list:
-            odf_list.append(t[0])
-            odf2Bridge[t[0]] = [[t[1], t[2]]]
-        else:
-            odf2Bridge[t[0]].append([t[1], t[2]])
+    odf_list = [t[0] for t in odfInfo]
 
     def __init__(self):	
                                                                                                                                                 
@@ -86,6 +87,7 @@ class app(dict):
             
     @staticmethod
     def forODF(odf_name, data):
+        print(odf_name, data)
         os.system(r'echo "default-on" > /sys/class/leds/ds:green:wlan/trigger')
         global ODFcache 
 
@@ -97,10 +99,36 @@ class app(dict):
       
         os.system(r'echo "none" > /sys/class/leds/ds:green:wlan/trigger')
 
+def odfdata_to_string(data, params):
+    r = ''
+    for i in range(len(data)):
+        if params[i] == 'int':
+            r += ',%9d' % int(data[i])
+        elif params[i] == 'float':
+            r += ',%9f' % float(data[i])
+        else:
+            r += ',%9d' % 0
+    return r[1:]
+
+def string_to_idfdata(data_list, params):
+    if len(data_list) != len(params):
+        return None
+    r = []
+    for i in range(len(params)):
+        try:
+            if params[i] == 'int':
+                r.append(int(data_list[i]))
+            elif params[i] == 'float':
+                r.append(float(data_list[i]))
+            else:
+                return None
+        except:
+            return None
+    return r 
 
 BClient = BridgeClient()
 def Bridge2Arduino():
-    global incomming, ODFcache, IDFcache, timestamp, IDFsignal
+    global incomming, ODFcache, IDFcache, timestamp, IDFsignal, odfMap
 
     while True:  
         for ODF in ODFcache:
@@ -110,44 +138,38 @@ def Bridge2Arduino():
                 if data == None:
                     continue
 
-                for dimension in odf2Bridge[ODF]:
-                    if data[dimension[0]] is None:
-                             continue
-                    
-                    BClient.put(dimension[1], str(int(data[dimension[0]])))
-
-                    '''                                         
-                    print '{f}[{d}] -> {p} = {v}, incomming[{f}] = {i}'.format(
-                                f=ODF,
-                                d=dimension[0],
-                                p=dimension[1],
-                                v=str(int(data[dimension[0]])),
-                                i=incomming[ODF],)
-                    '''            
-
-                    incomming[ODF] = incomming[ODF] ^ 1       
-                    BClient.put('incomming_'+ODF, str(incomming[ODF]))
+                if len(data) != len(odfMap[ODF]):
+                    print('ODF: %s, get data which wrong dimension' % ODF)
+                BClient.put(ODF, odfdata_to_string(data, odfMap[ODF]))
+                incomming[ODF] = incomming[ODF] ^ 1
+                BClient.put('incomming_'+ODF, str(incomming[ODF]))
+                print('BClient.put [%s]: %s. Incomming: %s' % (ODF, odfdata_to_string(data, odfMap[ODF]), str(incomming[ODF])))
+                continue
+                
             else:
                 pass
 
-        if time.time() - timestamp >= app.push_interval: 
+        if time.time() - timestamp >= app.push_interval*0.5:
             for IDF in idfInfo:
-                if IDFsignal.get(IDF[0]):
-                    tmp = BClient.get(IDF[0])
-                    IDFsignal[IDF[0]] = 0
+                idfName = IDF[0]
+                idfParams = IDF[1]
+                if IDFsignal.get(idfName):
+                    getValue = BClient.get(idfName)
+                    IDFsignal[idfName] = 0
                 else:
-                    tmp = None    
+                    getValue = None    
 
-                if tmp is None:
+                if getValue is None:
                     pass
                 else:
-                    v = IDF[1](tmp)
+                    v = string_to_idfdata(getValue.split(','), idfParams)
                     if v is not None:
-                        if IDFcache[IDF[0]].qsize():
-                            IDFcache[IDF[0]].get()
-                            IDFcache[IDF[0]].put(v)
+                        print('BClient.get [%s]: %s.' % (idfName, v))
+                        if IDFcache[idfName].qsize():
+                            IDFcache[idfName].get()
+                            IDFcache[idfName].put(v)
                         else:
-                            IDFcache[IDF[0]].put(v)
+                            IDFcache[idfName].put(v)
             timestamp = time.time()        
 
 
